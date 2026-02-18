@@ -527,7 +527,7 @@
     const SUPABASE_URL = 'https://peivllzxwmxxmsgyhanq.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXZsbHp4d214eG1zZ3loYW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MzQ2ODUsImV4cCI6MjA4NzAxMDY4NX0.7Hf-3F6P4d-bZ7BlNVlSnqXYrW04N_7nPitYahfbYQk';
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ============================================
     // 全局状态
@@ -542,7 +542,7 @@
     // ============================================
     async function init() {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session }, error } = await db.auth.getSession();
 
         if (error) throw error;
 
@@ -575,7 +575,7 @@
       document.getElementById('app').classList.add('show');
 
       // 获取用户名
-      const { data: profile } = await supabase
+      const { data: profile } = await db
         .from('profiles')
         .select('name')
         .eq('id', currentUser.id)
@@ -616,7 +616,7 @@
       try {
         if (isLogin) {
           // 登录
-          const { data, error } = await supabase.auth.signInWithPassword({
+          const { data, error } = await db.auth.signInWithPassword({
             email,
             password
           });
@@ -627,7 +627,7 @@
           await showApp();
         } else {
           // 注册
-          const { data, error } = await supabase.auth.signUp({
+          const { data, error } = await db.auth.signUp({
             email,
             password,
             options: {
@@ -638,7 +638,7 @@
           if (error) throw error;
 
           // 创建 profile
-          await supabase.from('profiles').insert({
+          await db.from('profiles').insert({
             id: data.user.id,
             name,
             email
@@ -672,7 +672,7 @@
     });
 
     document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await supabase.auth.signOut();
+      await db.auth.signOut();
       location.reload();
     });
 
@@ -680,7 +680,7 @@
     // 任务管理
     // ============================================
     async function loadTasks() {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('todos')
         .select(`
           *,
@@ -702,7 +702,7 @@
     }
 
     function subscribeToTasks() {
-      supabase
+      db
         .channel('todos')
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'todos' },
@@ -715,7 +715,7 @@
       text = text.trim();
       if (!text) return;
 
-      const { error } = await supabase
+      const { error } = await db
         .from('todos')
         .insert({
           text,
@@ -734,7 +734,7 @@
       const task = tasks.find(t => t.id === id);
       if (!task) return;
 
-      const { error } = await supabase
+      const { error } = await db
         .from('todos')
         .update({ done: !task.done })
         .eq('id', id);
@@ -747,7 +747,7 @@
     async function removeTask(id, userId) {
       if (userId !== currentUser.id) return;
 
-      const { error } = await supabase
+      const { error } = await db
         .from('todos')
         .delete()
         .eq('id', id);
@@ -763,7 +763,7 @@
 
       if (ids.length === 0) return;
 
-      const { error } = await supabase
+      const { error } = await db
         .from('todos')
         .delete()
         .in('id', ids);
