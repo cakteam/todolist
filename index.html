@@ -541,13 +541,25 @@
     // 初始化
     // ============================================
     async function init() {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (session) {
-        currentUser = session.user;
-        await showApp();
-      } else {
-        showAuth();
+        if (error) throw error;
+
+        if (session) {
+          currentUser = session.user;
+          await showApp();
+        } else {
+          showAuth();
+        }
+      } catch (err) {
+        console.error('初始化失败:', err);
+        document.getElementById('loading').innerHTML =
+          `<div style="color:#c0392b;max-width:400px;margin:0 auto;text-align:center;">
+            <div style="font-size:1.2rem;margin-bottom:8px;">连接失败</div>
+            <div style="font-size:0.85rem;color:#888;">${err.message}</div>
+            <button onclick="location.reload()" style="margin-top:16px;padding:8px 20px;border:1px solid #ccc;border-radius:8px;cursor:pointer;background:#fff;">重试</button>
+          </div>`;
       }
     }
 
