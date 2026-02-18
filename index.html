@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Todo</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --accent: #2d2d2d;
+      --accent-light: #5a5a5a;
+      --muted: #b0aea8;
+      --border: #e8e6e1;
+      --done-line: #c8c6c0;
+      --danger: #c0392b;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--accent);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 60px 16px 80px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    /* Header */
+    header {
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header p.date {
+      margin-top: 4px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+    }
+
+    /* Input */
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+
+    .input-row input {
+      flex: 1;
+      padding: 14px 18px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      font-size: 0.95rem;
+      color: var(--accent);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-row input::placeholder {
+      color: var(--muted);
+    }
+
+    .input-row input:focus {
+      border-color: var(--accent);
+    }
+
+    .input-row button {
+      padding: 14px 22px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1.3rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      line-height: 1;
+    }
+
+    .input-row button:hover {
+      opacity: 0.8;
+    }
+
+    /* Filter tabs */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .tabs button {
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 1.5px solid transparent;
+      background: transparent;
+      font-size: 0.82rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tabs button.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .tabs button:hover:not(.active) {
+      color: var(--accent-light);
+    }
+
+    /* Stats bar */
+    .stats {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+      padding-left: 2px;
+    }
+
+    /* List */
+    .todo-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      transition: opacity 0.2s, box-shadow 0.2s;
+      animation: slideIn 0.2s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .todo-item:hover {
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    /* Custom checkbox */
+    .check-btn {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      font-size: 0.7rem;
+      color: #fff;
+    }
+
+    .check-btn:hover {
+      border-color: var(--accent);
+    }
+
+    .todo-item.done .check-btn {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .todo-item.done .check-btn::after {
+      content: "✓";
+    }
+
+    /* Text */
+    .todo-text {
+      flex: 1;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      word-break: break-word;
+      transition: color 0.2s;
+    }
+
+    .todo-item.done .todo-text {
+      color: var(--muted);
+      text-decoration: line-through;
+      text-decoration-color: var(--done-line);
+    }
+
+    /* Delete */
+    .del-btn {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      opacity: 0;
+      transition: opacity 0.2s, color 0.2s;
+      padding: 2px 4px;
+    }
+
+    .todo-item:hover .del-btn {
+      opacity: 1;
+    }
+
+    .del-btn:hover {
+      color: var(--danger);
+    }
+
+    /* Empty state */
+    .empty {
+      text-align: center;
+      padding: 60px 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .empty .icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    /* Clear done */
+    .actions {
+      margin-top: 20px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .actions button {
+      background: none;
+      border: none;
+      font-size: 0.8rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .actions button:hover {
+      color: var(--danger);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>我的待办</h1>
+      <p class="date" id="dateLabel"></p>
+    </header>
+
+    <div class="input-row">
+      <input
+        id="taskInput"
+        type="text"
+        placeholder="添加新任务..."
+        maxlength="200"
+        autocomplete="off"
+      />
+      <button id="addBtn" title="添加">+</button>
+    </div>
+
+    <div class="tabs">
+      <button class="active" data-filter="all">全部</button>
+      <button data-filter="active">进行中</button>
+      <button data-filter="done">已完成</button>
+    </div>
+
+    <p class="stats" id="stats"></p>
+
+    <ul class="todo-list" id="todoList"></ul>
+
+    <div class="actions">
+      <button id="clearDoneBtn">清除已完成</button>
+    </div>
+  </div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────────────────────
+    let tasks = JSON.parse(localStorage.getItem("todos") || "[]");
+    let filter = "all";
+
+    // ── Date ───────────────────────────────────────────────────────────────
+    const days = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
+    const now = new Date();
+    document.getElementById("dateLabel").textContent =
+      `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 · ${days[now.getDay()]}`;
+
+    // ── Persist ────────────────────────────────────────────────────────────
+    function save() {
+      localStorage.setItem("todos", JSON.stringify(tasks));
+    }
+
+    // ── Render ─────────────────────────────────────────────────────────────
+    function render() {
+      const list = document.getElementById("todoList");
+      const stats = document.getElementById("stats");
+
+      const visible = tasks.filter(t =>
+        filter === "all"    ? true :
+        filter === "active" ? !t.done :
+                               t.done
+      );
+
+      const total  = tasks.length;
+      const doneN  = tasks.filter(t => t.done).length;
+      const activeN = total - doneN;
+
+      stats.textContent = total === 0
+        ? ""
+        : `共 ${total} 项 · 待完成 ${activeN} · 已完成 ${doneN}`;
+
+      if (visible.length === 0) {
+        const msg =
+          filter === "done"   ? "暂无已完成任务" :
+          filter === "active" ? "暂无进行中任务" :
+                                "还没有任何任务，添加一个吧";
+        list.innerHTML = `
+          <div class="empty">
+            <div class="icon">✦</div>
+            <div>${msg}</div>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = "";
+      visible.forEach(task => {
+        const li = document.createElement("li");
+        li.className = "todo-item" + (task.done ? " done" : "");
+        li.dataset.id = task.id;
+
+        li.innerHTML = `
+          <button class="check-btn" title="切换完成状态"></button>
+          <span class="todo-text">${escHtml(task.text)}</span>
+          <button class="del-btn" title="删除">✕</button>
+        `;
+
+        li.querySelector(".check-btn").addEventListener("click", () => toggle(task.id));
+        li.querySelector(".del-btn").addEventListener("click", () => remove(task.id));
+
+        list.appendChild(li);
+      });
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function escHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function addTask(text) {
+      text = text.trim();
+      if (!text) return;
+      tasks.unshift({ id: Date.now(), text, done: false });
+      save();
+      render();
+    }
+
+    function toggle(id) {
+      const t = tasks.find(t => t.id === id);
+      if (t) { t.done = !t.done; save(); render(); }
+    }
+
+    function remove(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      save();
+      render();
+    }
+
+    // ── Events ─────────────────────────────────────────────────────────────
+    document.getElementById("addBtn").addEventListener("click", () => {
+      const input = document.getElementById("taskInput");
+      addTask(input.value);
+      input.value = "";
+      input.focus();
+    });
+
+    document.getElementById("taskInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        addTask(e.target.value);
+        e.target.value = "";
+      }
+    });
+
+    document.querySelectorAll(".tabs button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        filter = btn.dataset.filter;
+        render();
+      });
+    });
+
+    document.getElementById("clearDoneBtn").addEventListener("click", () => {
+      tasks = tasks.filter(t => !t.done);
+      save();
+      render();
+    });
+
+    // ── Init ───────────────────────────────────────────────────────────────
+    render();
+  </script>
+</body>
+</html>
