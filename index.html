@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Todo</title>
+  <title>代办清单</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -20,7 +21,10 @@
       --border: #e8e6e1;
       --done-line: #c8c6c0;
       --danger: #c0392b;
+      --success: #27ae60;
       --radius: 12px;
+      --my-task: #e8f5e9;
+      --other-task: #fff3e0;
     }
 
     body {
@@ -31,7 +35,8 @@
       min-height: 100vh;
       display: flex;
       justify-content: center;
-      padding: 60px 16px 80px;
+      align-items: center;
+      padding: 20px;
     }
 
     .container {
@@ -39,22 +44,160 @@
       max-width: 560px;
     }
 
+    /* Auth Page */
+    .auth-container {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 40px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .auth-container h1 {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .auth-container p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--accent);
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .auth-switch {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .auth-switch a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .auth-switch a:hover {
+      text-decoration: underline;
+    }
+
+    .error-msg {
+      background: #fee;
+      color: var(--danger);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .error-msg.show {
+      display: block;
+    }
+
+    /* Main App (hidden initially) */
+    #app {
+      display: none;
+    }
+
+    #app.show {
+      display: block;
+    }
+
     /* Header */
     header {
       margin-bottom: 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    header h1 {
+    .header-left h1 {
       font-size: 2rem;
       font-weight: 700;
       letter-spacing: -0.5px;
     }
 
-    header p.date {
+    .header-left p.date {
       margin-top: 4px;
       font-size: 0.85rem;
       color: var(--muted);
       letter-spacing: 0.3px;
+    }
+
+    .user-info {
+      text-align: right;
+    }
+
+    .user-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .logout-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.75rem;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: color 0.2s;
+    }
+
+    .logout-btn:hover {
+      color: var(--danger);
     }
 
     /* Input */
@@ -156,6 +299,15 @@
       animation: slideIn 0.2s ease;
     }
 
+    .todo-item.my-task {
+      border-left: 3px solid var(--success);
+    }
+
+    .todo-item.other-task {
+      border-left: 3px solid var(--muted);
+      opacity: 0.85;
+    }
+
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(-6px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -182,8 +334,13 @@
       color: #fff;
     }
 
-    .check-btn:hover {
+    .check-btn:hover:not(:disabled) {
       border-color: var(--accent);
+    }
+
+    .check-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
     }
 
     .todo-item.done .check-btn {
@@ -196,12 +353,23 @@
     }
 
     /* Text */
-    .todo-text {
+    .todo-text-wrapper {
       flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .todo-text {
       font-size: 0.95rem;
       line-height: 1.4;
       word-break: break-word;
       transition: color 0.2s;
+    }
+
+    .todo-owner {
+      font-size: 0.75rem;
+      color: var(--muted);
     }
 
     .todo-item.done .todo-text {
@@ -223,11 +391,16 @@
       padding: 2px 4px;
     }
 
-    .todo-item:hover .del-btn {
+    .del-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.3 !important;
+    }
+
+    .todo-item:hover .del-btn:not(:disabled) {
       opacity: 1;
     }
 
-    .del-btn:hover {
+    .del-btn:hover:not(:disabled) {
       color: var(--danger);
     }
 
@@ -263,58 +436,334 @@
     .actions button:hover {
       color: var(--danger);
     }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>我的待办</h1>
-      <p class="date" id="dateLabel"></p>
-    </header>
+  <!-- Loading State -->
+  <div id="loading" class="loading">加载中...</div>
 
-    <div class="input-row">
-      <input
-        id="taskInput"
-        type="text"
-        placeholder="添加新任务..."
-        maxlength="200"
-        autocomplete="off"
-      />
-      <button id="addBtn" title="添加">+</button>
+  <!-- Auth Page -->
+  <div id="authPage" style="display: none;">
+    <div class="auth-container">
+      <h1>代办清单</h1>
+      <p>登录后与家人共享待办事项</p>
+
+      <div class="error-msg" id="authError"></div>
+
+      <form id="authForm">
+        <div class="form-group">
+          <label>姓名</label>
+          <input type="text" id="userName" placeholder="您的姓名" required />
+        </div>
+        <div class="form-group">
+          <label>邮箱</label>
+          <input type="email" id="userEmail" placeholder="your@email.com" required />
+        </div>
+        <div class="form-group">
+          <label>密码</label>
+          <input type="password" id="userPassword" placeholder="至少6位字符" minlength="6" required />
+        </div>
+        <button type="submit" class="btn" id="authBtn">登录</button>
+      </form>
+
+      <div class="auth-switch">
+        <span id="authSwitchText">还没有账号？</span>
+        <a href="#" id="authSwitchLink">注册</a>
+      </div>
     </div>
+  </div>
 
-    <div class="tabs">
-      <button class="active" data-filter="all">全部</button>
-      <button data-filter="active">进行中</button>
-      <button data-filter="done">已完成</button>
-    </div>
+  <!-- Main App -->
+  <div id="app">
+    <div class="container">
+      <header>
+        <div class="header-left">
+          <h1>代办清单</h1>
+          <p class="date" id="dateLabel"></p>
+        </div>
+        <div class="user-info">
+          <div class="user-name" id="currentUserName"></div>
+          <button class="logout-btn" id="logoutBtn">退出登录</button>
+        </div>
+      </header>
 
-    <p class="stats" id="stats"></p>
+      <div class="input-row">
+        <input
+          id="taskInput"
+          type="text"
+          placeholder="添加新任务..."
+          maxlength="200"
+          autocomplete="off"
+        />
+        <button id="addBtn" title="添加">+</button>
+      </div>
 
-    <ul class="todo-list" id="todoList"></ul>
+      <div class="tabs">
+        <button class="active" data-filter="all">全部</button>
+        <button data-filter="active">进行中</button>
+        <button data-filter="done">已完成</button>
+      </div>
 
-    <div class="actions">
-      <button id="clearDoneBtn">清除已完成</button>
+      <p class="stats" id="stats"></p>
+
+      <ul class="todo-list" id="todoList"></ul>
+
+      <div class="actions">
+        <button id="clearDoneBtn">清除我的已完成</button>
+      </div>
     </div>
   </div>
 
   <script>
-    // ── State ──────────────────────────────────────────────────────────────
-    let tasks = JSON.parse(localStorage.getItem("todos") || "[]");
+    // ============================================
+    // 配置 Supabase
+    // ============================================
+    const SUPABASE_URL = 'https://peivllzxwmxxmsgyhanq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXZsbHp4d214eG1zZ3loYW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MzQ2ODUsImV4cCI6MjA4NzAxMDY4NX0.7Hf-3F6P4d-bZ7BlNVlSnqXYrW04N_7nPitYahfbYQk';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ============================================
+    // 全局状态
+    // ============================================
+    let currentUser = null;
+    let tasks = [];
     let filter = "all";
+    let isLogin = true; // true: 登录模式, false: 注册模式
 
-    // ── Date ───────────────────────────────────────────────────────────────
-    const days = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
-    const now = new Date();
-    document.getElementById("dateLabel").textContent =
-      `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 · ${days[now.getDay()]}`;
+    // ============================================
+    // 初始化
+    // ============================================
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
 
-    // ── Persist ────────────────────────────────────────────────────────────
-    function save() {
-      localStorage.setItem("todos", JSON.stringify(tasks));
+      if (session) {
+        currentUser = session.user;
+        await showApp();
+      } else {
+        showAuth();
+      }
     }
 
-    // ── Render ─────────────────────────────────────────────────────────────
+    function showAuth() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('authPage').style.display = 'block';
+      document.getElementById('app').classList.remove('show');
+    }
+
+    async function showApp() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('authPage').style.display = 'none';
+      document.getElementById('app').classList.add('show');
+
+      // 获取用户名
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', currentUser.id)
+        .single();
+
+      const userName = profile?.name || currentUser.email.split('@')[0];
+      document.getElementById('currentUserName').textContent = userName;
+
+      // 设置日期
+      const days = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
+      const now = new Date();
+      document.getElementById("dateLabel").textContent =
+        `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 · ${days[now.getDay()]}`;
+
+      // 加载任务
+      await loadTasks();
+
+      // 订阅实时更新
+      subscribeToTasks();
+    }
+
+    // ============================================
+    // 认证相关
+    // ============================================
+    document.getElementById('authForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('userEmail').value;
+      const password = document.getElementById('userPassword').value;
+      const name = document.getElementById('userName').value;
+      const btn = document.getElementById('authBtn');
+      const errorMsg = document.getElementById('authError');
+
+      errorMsg.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = isLogin ? '登录中...' : '注册中...';
+
+      try {
+        if (isLogin) {
+          // 登录
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+
+          if (error) throw error;
+
+          currentUser = data.user;
+          await showApp();
+        } else {
+          // 注册
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { name }
+            }
+          });
+
+          if (error) throw error;
+
+          // 创建 profile
+          await supabase.from('profiles').insert({
+            id: data.user.id,
+            name,
+            email
+          });
+
+          currentUser = data.user;
+          await showApp();
+        }
+      } catch (error) {
+        errorMsg.textContent = error.message;
+        errorMsg.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = isLogin ? '登录' : '注册';
+      }
+    });
+
+    document.getElementById('authSwitchLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      isLogin = !isLogin;
+
+      document.getElementById('authBtn').textContent = isLogin ? '登录' : '注册';
+      document.getElementById('authSwitchText').textContent =
+        isLogin ? '还没有账号？' : '已有账号？';
+      document.getElementById('authSwitchLink').textContent =
+        isLogin ? '注册' : '登录';
+
+      document.getElementById('userName').parentElement.style.display =
+        isLogin ? 'none' : 'block';
+
+      document.getElementById('authError').classList.remove('show');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      location.reload();
+    });
+
+    // ============================================
+    // 任务管理
+    // ============================================
+    async function loadTasks() {
+      const { data, error } = await supabase
+        .from('todos')
+        .select(`
+          *,
+          profiles:user_id (name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('加载任务失败:', error);
+        return;
+      }
+
+      tasks = data.map(t => ({
+        ...t,
+        user_name: t.profiles?.name || '未知用户'
+      }));
+
+      render();
+    }
+
+    function subscribeToTasks() {
+      supabase
+        .channel('todos')
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'todos' },
+          () => loadTasks()
+        )
+        .subscribe();
+    }
+
+    async function addTask(text) {
+      text = text.trim();
+      if (!text) return;
+
+      const { error } = await supabase
+        .from('todos')
+        .insert({
+          text,
+          done: false,
+          user_id: currentUser.id
+        });
+
+      if (error) {
+        alert('添加失败: ' + error.message);
+      }
+    }
+
+    async function toggleTask(id, userId) {
+      if (userId !== currentUser.id) return;
+
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+
+      const { error } = await supabase
+        .from('todos')
+        .update({ done: !task.done })
+        .eq('id', id);
+
+      if (error) {
+        alert('更新失败: ' + error.message);
+      }
+    }
+
+    async function removeTask(id, userId) {
+      if (userId !== currentUser.id) return;
+
+      const { error } = await supabase
+        .from('todos')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        alert('删除失败: ' + error.message);
+      }
+    }
+
+    async function clearMyDoneTasks() {
+      const myDoneTasks = tasks.filter(t => t.done && t.user_id === currentUser.id);
+      const ids = myDoneTasks.map(t => t.id);
+
+      if (ids.length === 0) return;
+
+      const { error } = await supabase
+        .from('todos')
+        .delete()
+        .in('id', ids);
+
+      if (error) {
+        alert('清除失败: ' + error.message);
+      }
+    }
+
+    // ============================================
+    // 渲染
+    // ============================================
     function render() {
       const list = document.getElementById("todoList");
       const stats = document.getElementById("stats");
@@ -348,24 +797,31 @@
 
       list.innerHTML = "";
       visible.forEach(task => {
+        const isMine = task.user_id === currentUser.id;
         const li = document.createElement("li");
-        li.className = "todo-item" + (task.done ? " done" : "");
-        li.dataset.id = task.id;
+        li.className = "todo-item" + (task.done ? " done" : "") +
+                       (isMine ? " my-task" : " other-task");
 
         li.innerHTML = `
-          <button class="check-btn" title="切换完成状态"></button>
-          <span class="todo-text">${escHtml(task.text)}</span>
-          <button class="del-btn" title="删除">✕</button>
+          <button class="check-btn" title="${isMine ? '切换完成状态' : '只能操作自己的任务'}"
+                  ${!isMine ? 'disabled' : ''}></button>
+          <div class="todo-text-wrapper">
+            <span class="todo-text">${escHtml(task.text)}</span>
+            <span class="todo-owner">${escHtml(task.user_name)}</span>
+          </div>
+          <button class="del-btn" title="${isMine ? '删除' : '只能删除自己的任务'}"
+                  ${!isMine ? 'disabled' : ''}>✕</button>
         `;
 
-        li.querySelector(".check-btn").addEventListener("click", () => toggle(task.id));
-        li.querySelector(".del-btn").addEventListener("click", () => remove(task.id));
+        li.querySelector(".check-btn").addEventListener("click", () =>
+          toggleTask(task.id, task.user_id));
+        li.querySelector(".del-btn").addEventListener("click", () =>
+          removeTask(task.id, task.user_id));
 
         list.appendChild(li);
       });
     }
 
-    // ── Helpers ────────────────────────────────────────────────────────────
     function escHtml(str) {
       return str
         .replace(/&/g, "&amp;")
@@ -374,26 +830,9 @@
         .replace(/"/g, "&quot;");
     }
 
-    function addTask(text) {
-      text = text.trim();
-      if (!text) return;
-      tasks.unshift({ id: Date.now(), text, done: false });
-      save();
-      render();
-    }
-
-    function toggle(id) {
-      const t = tasks.find(t => t.id === id);
-      if (t) { t.done = !t.done; save(); render(); }
-    }
-
-    function remove(id) {
-      tasks = tasks.filter(t => t.id !== id);
-      save();
-      render();
-    }
-
-    // ── Events ─────────────────────────────────────────────────────────────
+    // ============================================
+    // 事件监听
+    // ============================================
     document.getElementById("addBtn").addEventListener("click", () => {
       const input = document.getElementById("taskInput");
       addTask(input.value);
@@ -417,14 +856,13 @@
       });
     });
 
-    document.getElementById("clearDoneBtn").addEventListener("click", () => {
-      tasks = tasks.filter(t => !t.done);
-      save();
-      render();
-    });
+    document.getElementById("clearDoneBtn").addEventListener("click", clearMyDoneTasks);
 
-    // ── Init ───────────────────────────────────────────────────────────────
-    render();
+    // 初始化登录模式（隐藏姓名字段）
+    document.getElementById('userName').parentElement.style.display = 'none';
+
+    // 启动应用
+    init();
   </script>
 </body>
 </html>
